@@ -1,6 +1,10 @@
 Django OAuth Toolkit
 ====================
 
+Note: this repository is Kepler's fork of the main django-oauth-toolkit package,
+to provide support for our Canvas LMS integration until the time comes when the
+main package supports OpenID Connect.
+
 .. image:: https://jazzband.co/static/img/badge.svg
    :target: https://jazzband.co/
    :alt: Jazzband
