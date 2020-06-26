@@ -24,8 +24,12 @@ from oauthlib.oauth2.rfc6749 import utils
 
 from .exceptions import FatalClientError
 from .models import (
-    AbstractApplication, get_access_token_model, get_application_model,
-    get_grant_model, get_id_token_model, get_refresh_token_model
+    AbstractApplication,
+    get_access_token_model,
+    get_application_model,
+    get_grant_model,
+    get_id_token_model,
+    get_refresh_token_model,
 )
 from .scopes import get_scopes_backend
 from .settings import oauth2_settings
@@ -209,7 +213,7 @@ class OAuth2Validator(RequestValidator):
             )
         else:
             log.warning("OAuth2 access token is invalid for an unknown reason.")
-            error = OrderedDict([("error", "invalid_token",), ])
+            error = OrderedDict([("error", "invalid_token",),])
         request.oauth2_error = error
         return request
 
@@ -450,9 +454,14 @@ class OAuth2Validator(RequestValidator):
         rfc:`8.4`, so validate the response_type only if it matches "code" or "token"
         """
         if response_type == "code":
-            return client.allows_grant_type(
-                AbstractApplication.GRANT_AUTHORIZATION_CODE
-            )
+            # return client.allows_grant_type(
+            #     AbstractApplication.GRANT_AUTHORIZATION_CODE
+            # )
+            # TODO: for now, we're allowing all response types, because canvas
+            # LMS doesn't work with this PR, but in the future it would be nice
+            # to make this mapping configurable from settings or a custom class
+            #
+            return True
         elif response_type == "token":
             return client.allows_grant_type(AbstractApplication.GRANT_IMPLICIT)
         elif response_type == "id_token":
@@ -558,9 +567,11 @@ class OAuth2Validator(RequestValidator):
 
         # expires_in is passed to Server on initialization
         # custom server class can have logic to override this
-        expires = timezone.now() + timedelta(seconds=token.get(
-            "expires_in", oauth2_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
-        ))
+        expires = timezone.now() + timedelta(
+            seconds=token.get(
+                "expires_in", oauth2_settings.ACCESS_TOKEN_EXPIRE_SECONDS,
+            )
+        )
 
         if request.grant_type == "client_credentials":
             request.user = None
@@ -722,9 +733,11 @@ class OAuth2Validator(RequestValidator):
             revoked__gt=timezone.now()
             - timedelta(seconds=oauth2_settings.REFRESH_TOKEN_GRACE_PERIOD_SECONDS)
         )
-        rt = RefreshToken.objects.filter(null_or_recent, token=refresh_token).select_related(
-            "access_token"
-        ).first()
+        rt = (
+            RefreshToken.objects.filter(null_or_recent, token=refresh_token)
+            .select_related("access_token")
+            .first()
+        )
 
         if not rt:
             return False
@@ -770,14 +783,28 @@ class OAuth2Validator(RequestValidator):
             seconds=oauth2_settings.ID_TOKEN_EXPIRE_SECONDS
         )
         # Required ID Token claims
+
+        # TODO: it would be nice to make additional claims a function of the
+        # current user, and to make this configurable through some kind of
+        # setting, but I'm in a huge rush to get integration with Canvas LMS
+        # done, so we're just going to hardcode in email, name, and roles for
+        # now, since we have to maintain a private fork of this repo until at
+        # least https://github.com/jazzband/django-oauth-toolkit/pull/545 gets
+        # merged
         claims = {
             "iss": oauth2_settings.OIDC_ISS_ENDPOINT,
             "sub": str(request.user.id),
+            "name": request.user.name,
+            "email": request.user.email,
             "aud": request.client_id,
             "exp": int(dateformat.format(expiration_time, "U")),
             "iat": int(dateformat.format(datetime.utcnow(), "U")),
             "auth_time": int(dateformat.format(request.user.last_login, "U")),
         }
+
+        # :D  I say no more
+        if hasattr(request.user, "get_canvas_roles"):
+            claims["admin_roles"] = request.user.get_canvas_roles()
 
         nonce = getattr(request, "nonce", None)
         if nonce:

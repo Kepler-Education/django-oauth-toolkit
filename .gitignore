@@ -39,8 +39,10 @@ nosetests.xml
 .project
 .pydevproject
 
-# PyCharm stuff
+# editor stuff
 .idea
+.vscode
+.vim
 
 # Sphinx build dir
 _build

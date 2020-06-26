@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name='IDToken',
             fields=[
                 ('id', models.BigAutoField(primary_key=True, serialize=False)),
-                ('token', models.TextField(unique=True)),
+                ('token', models.TextField()),
                 ('expires', models.DateTimeField()),
                 ('scope', models.TextField(blank=True)),
                 ('created', models.DateTimeField(auto_now_add=True)),

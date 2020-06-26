@@ -449,7 +449,7 @@ class AbstractIDToken(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True,
         related_name="%(app_label)s_%(class)s"
     )
-    token = models.TextField(unique=True)
+    token = models.TextField()
     application = models.ForeignKey(
         oauth2_settings.APPLICATION_MODEL, on_delete=models.CASCADE, blank=True, null=True,
     )
